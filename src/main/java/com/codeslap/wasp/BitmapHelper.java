@@ -96,7 +96,7 @@ public class BitmapHelper {
             return;
         }
         for (String url : urls) {
-            registerBitmapObserver(context, url, observer);
+            registerBitmapObserver(context, url, observer, null);
         }
     }
 
@@ -107,7 +107,7 @@ public class BitmapHelper {
      * @param urlFrom  A valid URL pointing to a bitmap
      * @param observer Will be notified on bitmap loaded
      */
-    public void registerBitmapObserver(Context context, String urlFrom, Observer observer) {
+    public void registerBitmapObserver(Context context, String urlFrom, Observer observer, com.codeslap.wasp.BitmapLoader fileLoader) {
         if (isInvalidUri(urlFrom)) {
             return;
         }
@@ -124,6 +124,9 @@ public class BitmapHelper {
 
         if (!BitmapUtils.isBitmapValid(bitmap)) { //humm garbage collected or not already loaded lest try to load it anyway
             ref.addObserver(observer);
+            if (fileLoader != null) {
+                ref.setLoader(fileLoader);
+            }
             loader.load(context, ref);
         } else {
             observer.update(ref, null); // We got a valid ref and bitmap let's the observer know
@@ -137,7 +140,11 @@ public class BitmapHelper {
      * @param observer Will be notified on bitmap loaded
      */
     public void registerBitmapObserver(Context context, UrlHolder observer) {
-        registerBitmapObserver(context, observer.getUrl(), observer);
+        registerBitmapObserver(context, observer.getUrl(), observer, null);
+    }
+
+    public void registerBitmapObserver(Context context, UrlHolder observer, com.codeslap.wasp.BitmapLoader fileLoader) {
+        registerBitmapObserver(context, observer.getUrl(), observer, fileLoader);
     }
 
     private static boolean isInvalidUri(String url) {
@@ -157,6 +164,7 @@ public class BitmapHelper {
         Observer stickyObserver;
         int currentSize;
         int previousSize;
+        private com.codeslap.wasp.BitmapLoader mFileLoader;
 
         /**
          * Creates a new instance with given uri
@@ -191,6 +199,14 @@ public class BitmapHelper {
 
         public int getPreviousSize() {
             return previousSize;
+        }
+
+        public void setLoader(com.codeslap.wasp.BitmapLoader fileLoader) {
+            mFileLoader = fileLoader;
+        }
+
+        public com.codeslap.wasp.BitmapLoader getLoader() {
+            return mFileLoader;
         }
 
         @Override
@@ -343,7 +359,11 @@ public class BitmapHelper {
                 }
 
                 if (image == null) {//So far nothing is cached, lets download it
-                    IOUtils.downloadFile(mContext, reference.getUri(), file);
+                    if (reference.getLoader() != null) {
+                        reference.getLoader().load(mContext, reference.getUri(), file);
+                    } else {
+                        IOUtils.downloadFile(mContext, reference.getUri(), file);
+                    }
                     if (file.exists()) {
                         image = BitmapUtils.loadBitmapFile(file.getCanonicalPath());
                     }

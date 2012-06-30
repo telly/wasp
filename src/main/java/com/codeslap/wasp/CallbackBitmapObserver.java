@@ -85,4 +85,20 @@ public class CallbackBitmapObserver implements UrlHolder {
          */
         void receiveBitmap(Bitmap bitmap);
     }
+
+    /**
+     * Callback to be notified on bitmap load
+     */
+    public static abstract class SimpleBitmapCallback implements BitmapCallback {
+        public final boolean stillNeedsUrl(String url) {
+            return true;
+        }
+
+        /**
+         * Called on UI thread when a bitmap is loaded
+         *
+         * @param bitmap the loaded bitmap
+         */
+        public abstract void receiveBitmap(Bitmap bitmap);
+    }
 }
