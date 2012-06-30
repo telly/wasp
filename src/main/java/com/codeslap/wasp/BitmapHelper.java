@@ -130,6 +130,16 @@ public class BitmapHelper {
         }
     }
 
+    /**
+     * Download and put in cache a bitmap
+     *
+     * @param context  Context to use
+     * @param observer Will be notified on bitmap loaded
+     */
+    public void registerBitmapObserver(Context context, UrlHolder observer) {
+        registerBitmapObserver(context, observer.getUrl(), observer);
+    }
+
     private static boolean isInvalidUri(String url) {
         return url == null || url.length() == 0;
     }

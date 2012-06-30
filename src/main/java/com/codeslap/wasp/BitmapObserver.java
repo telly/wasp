@@ -6,7 +6,6 @@ import android.widget.ImageView;
 
 import java.lang.ref.WeakReference;
 import java.util.Observable;
-import java.util.Observer;
 
 /**
  * Observer used to set the bitmap in given ImageView
@@ -14,7 +13,7 @@ import java.util.Observer;
  * @author evelio
  * @version 1.0
  */
-public class BitmapObserver implements Observer {
+public class BitmapObserver implements UrlHolder {
     private String url;
     private final WeakReference<ImageView> viewRef;
     private final Handler uiHandler;
@@ -62,5 +61,10 @@ public class BitmapObserver implements Observer {
                 }
             }
         }
+    }
+
+    @Override
+    public String getUrl() {
+        return url;
     }
 }

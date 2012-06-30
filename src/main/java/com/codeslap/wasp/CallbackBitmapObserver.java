@@ -4,13 +4,12 @@ import android.graphics.Bitmap;
 import android.os.Handler;
 
 import java.util.Observable;
-import java.util.Observer;
 
 /**
  * Pretty much the same as{@link BitmapObserver} but this is designed to allow any implementation
  * of {@link BitmapCallback} to be notified on Bitmap load
  */
-public class CallbackBitmapObserver implements Observer {
+public class CallbackBitmapObserver implements UrlHolder {
     private String url;
     private final BitmapCallback callbackRef;
     private final Handler uiHandler;
@@ -35,6 +34,7 @@ public class CallbackBitmapObserver implements Observer {
         this.url = url;
     }
 
+    @Override
     public synchronized String getUrl() {
         return url;
     }
