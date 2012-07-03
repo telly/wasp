@@ -6,6 +6,7 @@ import android.os.Debug;
 import android.util.Log;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -81,6 +82,35 @@ public class BitmapHelper {
             return ref.getBitmap();
         }
         return null;
+    }
+
+    /**
+     * Register a bitmap in the cache system.
+     *
+     * @param context used to get the cache directory
+     * @param bitmap  the bitmap to save to cache
+     * @param uri     the unique resource identifier to this cache
+     * @param persist true if the bitmap should be persisted to file system
+     */
+    public void cacheBitmap(Context context, Bitmap bitmap, String uri, boolean persist) {
+        if (!BitmapUtils.isBitmapValid(bitmap)) {
+            return;
+        }
+
+        if (persist) {
+            String filename = String.valueOf(uri.hashCode());
+            File file = new File(IOUtils.getCacheDirectory(context), filename);
+            try {
+                FileOutputStream stream = new FileOutputStream(file);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+                stream.close();
+            } catch (Exception ignored) {
+            }
+        }
+
+        BitmapRef bitmapRef = new BitmapRef(uri);
+        bitmapRef.bitmapRef = bitmap;
+        cache.put(uri, bitmapRef);
     }
 
     /**
@@ -308,7 +338,7 @@ public class BitmapHelper {
          * @param ref     Reference to use
          */
         private void load(Context context, BitmapRef ref) {
-            if (ref == null || ref.getBitmap() != null) {
+            if (ref == null || BitmapUtils.isBitmapValid(ref.getBitmap())) {
                 return;
             }
 

@@ -17,6 +17,8 @@ import java.net.URLConnection;
  * @version 1.0
  */
 class IOUtils {
+    private static boolean alreadyCheckedInternetPermission = false;
+
     /**
      * Non instance constants class
      */
@@ -88,32 +90,31 @@ class IOUtils {
         if (context == null) {
             throw new RuntimeException("Context shall not be null");
         }
-        try {
-            PackageManager pm = context.getPackageManager();
-            PackageInfo packageInfo = pm.getPackageInfo(context.getPackageName(), PackageManager.GET_PERMISSIONS);
-            String[] requestedPermissions = packageInfo.requestedPermissions;
-            if (requestedPermissions == null) {
-                throw new RuntimeException("You must add android.permission.INTERNET to your app");
-            }
-            boolean found = false;
-            for (String requestedPermission : requestedPermissions) {
-                if ("android.permission.INTERNET".equals(requestedPermission)) {
-                    found = true;
+        if (!alreadyCheckedInternetPermission) {
+            try {
+                PackageManager pm = context.getPackageManager();
+                PackageInfo packageInfo = pm.getPackageInfo(context.getPackageName(), PackageManager.GET_PERMISSIONS);
+                String[] requestedPermissions = packageInfo.requestedPermissions;
+                if (requestedPermissions == null) {
+                    throw new RuntimeException("You must add android.permission.INTERNET to your app");
                 }
+                boolean found = false;
+                for (String requestedPermission : requestedPermissions) {
+                    if ("android.permission.INTERNET".equals(requestedPermission)) {
+                        found = true;
+                    }
+                }
+                if (!found) {
+                    throw new RuntimeException("You must add android.permission.INTERNET to your app");
+                } else {
+                    alreadyCheckedInternetPermission = true;
+                }
+            } catch (PackageManager.NameNotFoundException ignored) {
             }
-            if (!found) {
-                throw new RuntimeException("You must add android.permission.INTERNET to your app");
-            }
-        } catch (PackageManager.NameNotFoundException ignored) {
         }
-
 
         if (redirect > MAX_REDIRECTS) {
             throw new IOException("Too many redirects for " + fromUrl);
-        }
-        // TODO remove this once it avatars are working fine from backend
-        if (fromUrl != null && fromUrl.startsWith("//")) {
-            fromUrl = "http:" + fromUrl;
         }
 
         URL url = new URL(fromUrl);
