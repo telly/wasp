@@ -3,16 +3,12 @@ package com.codeslap.wasp;
 import android.graphics.Bitmap;
 import android.os.Handler;
 
-import java.util.Observable;
-
 /**
  * Pretty much the same as{@link BitmapObserver} but this is designed to allow any implementation
  * of {@link BitmapCallback} to be notified on Bitmap load
  */
-public class CallbackBitmapObserver implements UrlHolder {
-    private String url;
-    private final BitmapCallback callbackRef;
-    private final Handler uiHandler;
+public class CallbackBitmapObserver extends BaseBitmapObserver {
+    private final BitmapCallback mCallbackRef;
 
     /**
      * Creates an observer by associating a given callback with given URL
@@ -22,45 +18,47 @@ public class CallbackBitmapObserver implements UrlHolder {
      * @param uiThreadHandler Handler created in UI Thread to call back
      */
     public CallbackBitmapObserver(BitmapCallback callback, String url, Handler uiThreadHandler) {
-        callbackRef = callback;
-        uiHandler = uiThreadHandler;
-        setUrl(url);
+        super(url, uiThreadHandler);
+        mCallbackRef = callback;
     }
 
     /**
-     * @param url url to set
+     * Creates an observer by associating a given callback with given URL. This will
+     * execute the callbacks in a non-UI thread. If you want to perform task that must
+     * be run on the ui thread, send a {@link Handler} using the
+     * {@link CallbackBitmapObserver#CallbackBitmapObserver(BitmapCallback, String, Handler)}
+     * constructor.
+     *
+     * @param callback callback to call when Bitmap is ready
+     * @param url      URL to associate
      */
-    public synchronized void setUrl(String url) {
-        this.url = url;
+    public CallbackBitmapObserver(BitmapCallback callback, String url) {
+        super(url, null);
+        mCallbackRef = callback;
     }
 
     @Override
-    public synchronized String getUrl() {
-        return url;
-    }
-
-    @Override
-    public void update(Observable observable, Object data) {
-        if (observable instanceof BitmapHelper.BitmapRef) {
-            final BitmapHelper.BitmapRef ref = (BitmapHelper.BitmapRef) observable;
-            final String refUri = ref.getUri();
-            if (refUri != null && refUri.equals(url)) {
-                final Bitmap bmp = ref.getBitmap();
-                final BitmapCallback callback = callbackRef;
-                if (callback != null && BitmapUtils.isBitmapValid(bmp) && callback.stillNeedsUrl(refUri)) { //Check 1
-                    uiHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            // in order to avoid repeating thumbnails or setting wrong ones, we check here
-                            // the last tag (url) that was set to the image viewRef. that way, this we make
-                            // sure the bitmap that is shown is the correct one
-                            if (callback.stillNeedsUrl(refUri)) {
-                                callback.receiveBitmap(bmp);
-                            }
-                        }
-                    });
+    protected void doLoad(BitmapHelper.BitmapRef reference, final Bitmap bitmap) {
+        final String refUri = reference.getUri();
+        if (mCallbackRef == null || !BitmapUtils.isBitmapValid(bitmap) || !mCallbackRef.stillNeedsUrl(refUri)) {
+            return;
+        }
+        Runnable runnableCallback = new Runnable() {
+            @Override
+            public void run() {
+                // in order to avoid repeating thumbnails or setting wrong ones, we check here
+                // the last tag (url) that was set to the image viewRef. that way, this we make
+                // sure the bitmap that is shown is the correct one
+                if (mCallbackRef.stillNeedsUrl(refUri)) {
+                    mCallbackRef.receiveBitmap(refUri, bitmap);
                 }
             }
+        };
+        Handler handler = getHandler();
+        if (handler == null) { // if there is no handler, just run the callback
+            runnableCallback.run();
+        } else {
+            handler.post(runnableCallback);
         }
     }
 
@@ -69,36 +67,34 @@ public class CallbackBitmapObserver implements UrlHolder {
      */
     public static interface BitmapCallback {
         /**
-         * Indicate if this callback should be notified by calling {@link #receiveBitmap(android.graphics.Bitmap)}
+         * Indicate if this callback should be notified by calling {@link #receiveBitmap(String, android.graphics.Bitmap)}
          * when the bitmap is ready
          *
-         * @param url Uniform Resource Locator pointing to a bitmap (PNG, JPG, etc.)
+         * @param uri Uniform Resource Identifier pointing to a bitmap (PNG, JPG, etc.)
          * @return true if this callback needs the bitmap at a given URL
          *         false otherwise
          */
-        boolean stillNeedsUrl(String url);
+        boolean stillNeedsUrl(String uri);
 
         /**
          * Called on UI thread when a bitmap is loaded
          *
+         * @param uri    the uri for this bitmap
          * @param bitmap the loaded bitmap
          */
-        void receiveBitmap(Bitmap bitmap);
+        void receiveBitmap(String uri, Bitmap bitmap);
     }
 
     /**
      * Callback to be notified on bitmap load
      */
     public static abstract class SimpleBitmapCallback implements BitmapCallback {
-        public final boolean stillNeedsUrl(String url) {
+        @Override
+        public final boolean stillNeedsUrl(String uri) {
             return true;
         }
 
-        /**
-         * Called on UI thread when a bitmap is loaded
-         *
-         * @param bitmap the loaded bitmap
-         */
-        public abstract void receiveBitmap(Bitmap bitmap);
+        @Override
+        public abstract void receiveBitmap(String uri, Bitmap bitmap);
     }
 }

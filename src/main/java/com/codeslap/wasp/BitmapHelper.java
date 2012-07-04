@@ -85,6 +85,45 @@ public class BitmapHelper {
     }
 
     /**
+     * Try to get the bitmap from cache
+     *
+     * @param context used to get the cache directory
+     * @param urlFrom A valid URL pointing to a bitmap
+     * @return A bitmap associated to given url if any available or will try to download it
+     *         <p/>
+     *         Note: in case of urlFrom parameter is null this method does nothing
+     */
+    public Bitmap getBitmapFromCacheDir(Context context, String urlFrom) {
+        if (isInvalidUri(urlFrom)) {
+            return null;
+        }
+        Bitmap bitmap = getBitmap(urlFrom);
+        if (BitmapUtils.isBitmapValid(bitmap)) {
+            // bitmap was already cached, just return it
+            return bitmap;
+        }
+        // bitmap is not cached, let's see if it is persisted in the cache directory
+        File cacheDirectory = IOUtils.getCacheDirectory(context);
+        String filename = String.valueOf(urlFrom.hashCode());
+        File file = new File(cacheDirectory, filename);
+        if (file.exists()) {
+            // file is there... let's try to decode it
+            try {
+                bitmap = BitmapUtils.loadBitmapFile(file.getCanonicalPath());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            if (BitmapUtils.isBitmapValid(bitmap)) {
+                BitmapRef bitmapRef = new BitmapRef(urlFrom);
+                bitmapRef.loaded(bitmap);
+                cache.put(urlFrom, bitmapRef);
+                return bitmap;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Register a bitmap in the cache system.
      *
      * @param context used to get the cache directory
@@ -92,20 +131,25 @@ public class BitmapHelper {
      * @param uri     the unique resource identifier to this cache
      * @param persist true if the bitmap should be persisted to file system
      */
-    public void cacheBitmap(Context context, Bitmap bitmap, String uri, boolean persist) {
+    public void cacheBitmap(final Context context, final Bitmap bitmap, final String uri, boolean persist) {
         if (!BitmapUtils.isBitmapValid(bitmap)) {
             return;
         }
 
         if (persist) {
-            String filename = String.valueOf(uri.hashCode());
-            File file = new File(IOUtils.getCacheDirectory(context), filename);
-            try {
-                FileOutputStream stream = new FileOutputStream(file);
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
-                stream.close();
-            } catch (Exception ignored) {
-            }
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    String filename = String.valueOf(uri.hashCode());
+                    File file = new File(IOUtils.getCacheDirectory(context), filename);
+                    try {
+                        FileOutputStream stream = new FileOutputStream(file);
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+                        stream.close();
+                    } catch (Exception ignored) {
+                    }
+                }
+            }).start();
         }
 
         BitmapRef bitmapRef = new BitmapRef(uri);
@@ -121,11 +165,12 @@ public class BitmapHelper {
      * @param urls     List of URL to download/load from
      * @param observer Will be notified on bitmap loaded
      */
-    public void bulkBitmaps(Context context, List<String> urls, Observer observer) {
+    public void bulkBitmaps(Context context, List<String> urls, BaseBitmapObserver observer) {
         if (observer == null || urls == null || urls.size() < 1) {
             return;
         }
         for (String url : urls) {
+            observer.setTakeUriIntoAccount(false);// since the same observer will be used for all urls
             registerBitmapObserver(context, url, observer, null);
         }
     }
@@ -137,7 +182,7 @@ public class BitmapHelper {
      * @param urlFrom  A valid URL pointing to a bitmap
      * @param observer Will be notified on bitmap loaded
      */
-    public void registerBitmapObserver(Context context, String urlFrom, Observer observer, com.codeslap.wasp.BitmapLoader fileLoader) {
+    public void registerBitmapObserver(Context context, String urlFrom, BaseBitmapObserver observer, com.codeslap.wasp.BitmapLoader fileLoader) {
         if (isInvalidUri(urlFrom)) {
             return;
         }
@@ -169,11 +214,11 @@ public class BitmapHelper {
      * @param context  Context to use
      * @param observer Will be notified on bitmap loaded
      */
-    public void registerBitmapObserver(Context context, UrlHolder observer) {
+    public void registerBitmapObserver(Context context, BaseBitmapObserver observer) {
         registerBitmapObserver(context, observer.getUrl(), observer, null);
     }
 
-    public void registerBitmapObserver(Context context, UrlHolder observer, com.codeslap.wasp.BitmapLoader fileLoader) {
+    public void registerBitmapObserver(Context context, BaseBitmapObserver observer, com.codeslap.wasp.BitmapLoader fileLoader) {
         registerBitmapObserver(context, observer.getUrl(), observer, fileLoader);
     }
 
