@@ -1,4 +1,4 @@
-package com.codeslap.wasp;
+package com.telly.wasp;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -182,7 +182,7 @@ public class BitmapHelper {
      * @param urlFrom  A valid URL pointing to a bitmap
      * @param observer Will be notified on bitmap loaded
      */
-    public void registerBitmapObserver(Context context, String urlFrom, BaseBitmapObserver observer, com.codeslap.wasp.BitmapLoader fileLoader) {
+    public void registerBitmapObserver(Context context, String urlFrom, BaseBitmapObserver observer, com.telly.wasp.BitmapLoader fileLoader) {
         if (isInvalidUri(urlFrom)) {
             return;
         }
@@ -218,7 +218,7 @@ public class BitmapHelper {
         registerBitmapObserver(context, observer.getUrl(), observer, null);
     }
 
-    public void registerBitmapObserver(Context context, BaseBitmapObserver observer, com.codeslap.wasp.BitmapLoader fileLoader) {
+    public void registerBitmapObserver(Context context, BaseBitmapObserver observer, com.telly.wasp.BitmapLoader fileLoader) {
         registerBitmapObserver(context, observer.getUrl(), observer, fileLoader);
     }
 
@@ -239,7 +239,7 @@ public class BitmapHelper {
         Observer stickyObserver;
         int currentSize;
         int previousSize;
-        private com.codeslap.wasp.BitmapLoader mFileLoader;
+        private com.telly.wasp.BitmapLoader mFileLoader;
 
         /**
          * Creates a new instance with given uri
@@ -276,11 +276,11 @@ public class BitmapHelper {
             return previousSize;
         }
 
-        public void setLoader(com.codeslap.wasp.BitmapLoader fileLoader) {
+        public void setLoader(com.telly.wasp.BitmapLoader fileLoader) {
             mFileLoader = fileLoader;
         }
 
-        public com.codeslap.wasp.BitmapLoader getLoader() {
+        public com.telly.wasp.BitmapLoader getLoader() {
             return mFileLoader;
         }
 

@@ -1,4 +1,4 @@
-package com.codeslap.wasp;
+package com.telly.wasp;
 
 import android.content.Context;
 

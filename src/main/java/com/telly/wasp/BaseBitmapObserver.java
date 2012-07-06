@@ -1,4 +1,4 @@
-package com.codeslap.wasp;
+package com.telly.wasp;
 
 import android.graphics.Bitmap;
 import android.os.Handler;

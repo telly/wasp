@@ -2,9 +2,6 @@ Wasp - Bitmap Network Utilities for Android
 ===========================================
 
 This library contains some helpers used to download images asynchronously and get their bitmap.
-It was almost entirely written by [Evelio Tarazona][1] and hopefully he won't get upset after seeing this.
-
-I had to move this code here since I have been using it everywhere and don't want to keep repeating it.
 
 ###Examples
 
@@ -47,5 +44,22 @@ if (BitmapUtils.isBitmapValid(bitmap)) {
     bh.registerBitmapObserver(this, imageUrl, avatarObserver);
 }
 ```
+
+License
+=======
+
+    Copyright 2012 Telly
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
 
   [1]: https://github.com/eveliotc

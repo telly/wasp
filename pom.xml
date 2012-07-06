@@ -13,7 +13,7 @@
     <packaging>jar</packaging>
     <name>Wasp - Bitmap Utilities for Android</name>
     <description>Bitmap utilities for Android</description>
-    <url>https://github.com/casidiablo/wasp</url>
+    <url>https://github.com/twitvid/wasp</url>
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
@@ -22,17 +22,32 @@
         </license>
     </licenses>
     <scm>
-        <connection>scm:git:git@github.com:casidiablo/wasp.git</connection>
-        <developerConnection>scm:git:git@github.com:casidiablo/wasp.git</developerConnection>
-        <url>git@github.com:casidiablo/wasp.git</url>
+        <connection>scm:git:git@github.com:twitvid/wasp.git</connection>
+        <developerConnection>scm:git:git@github.com:twitvid/wasp.git</developerConnection>
+        <url>git@github.com:twitvid/wasp.git</url>
     </scm>
     <developers>
+        <developer>
+            <id>eveliotc</id>
+            <name>Evelio Tarazona Cáceres</name>
+            <email>evelio@telly.com</email>
+            <url>http://evel.io/</url>
+            <roles>
+                <role>Lead</role>
+                <role>Developer</role>
+                <role>Contributor</role>
+                <role>Architect</role>
+            </roles>
+        </developer>
         <developer>
             <id>casidiablo</id>
             <name>Cristian Castiblanco</name>
             <email>cristian@elhacker.net</email>
             <timezone>0</timezone>
             <url>http://casidiablo.net/</url>
+            <roles>
+                <role>Contributor</role>
+            </roles>
         </developer>
     </developers>
 
