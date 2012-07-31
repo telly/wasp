@@ -24,6 +24,7 @@ public class BitmapHelper {
      * Unique instance of this helper
      */
     private static BitmapHelper instance;
+    private static final String WASP_PREFIX = "wasp";
     /**
      * On memory pool to add already loaded from file bitmaps
      * Note: will be purged on by itself in case of low memory
@@ -65,6 +66,62 @@ public class BitmapHelper {
     }
 
     /**
+     * Deletes one or more cache files. This method runs synchronously so you
+     * must put it inside a worker thread if you do not want to block the UI
+     */
+    public void deleteCacheFile(Context context, String... uris) {
+        if (uris == null || uris.length == 0) {
+            throw new IllegalStateException("Uri array is empty or null");
+        }
+        for (String uri : uris) {
+            File file = getCacheFileFromUri(context, uri);
+            if (file.exists()) {
+                file.delete();
+            }
+        }
+    }
+
+    /**
+     * Deletes all cached files. This method runs synchronously so you must put it
+     * inside a worker thread if you do not want to block the UI
+     */
+    public void deleteAllCachedFiles(Context context) {
+        File cacheDirectory = IOUtils.getCacheDirectory(context);
+        if (cacheDirectory == null || !cacheDirectory.exists()) {
+            return;
+        }
+        String[] files = cacheDirectory.list();
+        for (String fileName : files) {
+            if (!fileName.startsWith(WASP_PREFIX)) {
+                continue;
+            }
+            File file = new File(cacheDirectory, fileName);
+            if (file.exists()) {
+                file.delete();
+            }
+        }
+    }
+
+    /**
+     * @return number of files in the cache directory. This is not necessarily the number
+     *         of images downloaded, nor the images in memory cache.
+     */
+    public int savedFilesCount(Context context) {
+        File cacheDirectory = IOUtils.getCacheDirectory(context);
+        if (cacheDirectory == null || !cacheDirectory.exists() || !cacheDirectory.isDirectory()) {
+            return 0;
+        }
+        int count = 0;
+        String[] files = cacheDirectory.list();
+        for (String fileName : files) {
+            if (fileName.startsWith(WASP_PREFIX)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
      * Try to get the bitmap from cache
      *
      * @param urlFrom A valid URL pointing to a bitmap
@@ -103,9 +160,7 @@ public class BitmapHelper {
             return bitmap;
         }
         // bitmap is not cached, let's see if it is persisted in the cache directory
-        File cacheDirectory = IOUtils.getCacheDirectory(context);
-        String filename = String.valueOf(urlFrom.hashCode());
-        File file = new File(cacheDirectory, filename);
+        File file = getCacheFileFromUri(context, urlFrom);
         if (file.exists()) {
             // file is there... let's try to decode it
             try {
@@ -140,8 +195,7 @@ public class BitmapHelper {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    String filename = String.valueOf(uri.hashCode());
-                    File file = new File(IOUtils.getCacheDirectory(context), filename);
+                    File file = getCacheFileFromUri(context, uri);
                     try {
                         FileOutputStream stream = new FileOutputStream(file);
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
@@ -226,6 +280,16 @@ public class BitmapHelper {
         return url == null || url.length() == 0;
     }
 
+    private static File getCacheFileFromUri(Context context, String urlFrom) {
+        File cacheDirectory = IOUtils.getCacheDirectory(context);
+        return getCacheFileFromUri(context, cacheDirectory, urlFrom);
+    }
+
+    private static File getCacheFileFromUri(Context context, File cacheDir, String urlFrom) {
+        String filename = WASP_PREFIX + String.valueOf(urlFrom.hashCode());
+        return new File(cacheDir, filename);
+    }
+
     /**
      * Wrapper to an association between an URL and a in memory cached bitmap
      * <p/>
@@ -282,11 +346,6 @@ public class BitmapHelper {
 
         public com.telly.wasp.BitmapLoader getLoader() {
             return mFileLoader;
-        }
-
-        @Override
-        public int hashCode() {
-            return from.hashCode();
         }
 
         @Override
@@ -425,9 +484,7 @@ public class BitmapHelper {
 
             private Bitmap doLoad() throws IOException {
                 Bitmap image = null;
-
-                String filename = String.valueOf(reference.hashCode());
-                File file = new File(cacheDir, filename);
+                File file = BitmapHelper.getCacheFileFromUri(mContext, cacheDir, reference.from);
 
                 if (file.exists()) {//Something is stored
                     image = BitmapUtils.loadBitmapFile(file.getCanonicalPath());
