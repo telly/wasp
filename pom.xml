@@ -9,7 +9,7 @@
 
     <groupId>com.codeslap</groupId>
     <artifactId>wasp</artifactId>
-    <version>1.3</version>
+    <version>1.4-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>Wasp - Bitmap Utilities for Android</name>
     <description>Bitmap utilities for Android</description>
