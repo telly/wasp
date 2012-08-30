@@ -16,7 +16,7 @@ import java.net.URLConnection;
  * @author evelio
  * @version 1.0
  */
-class IOUtils {
+public class IOUtils {
     private static boolean alreadyCheckedInternetPermission = false;
 
     /**
