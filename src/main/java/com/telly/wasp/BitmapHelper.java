@@ -1,13 +1,16 @@
 package com.telly.wasp;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Debug;
 import android.util.Log;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -176,6 +179,94 @@ public class BitmapHelper {
             }
         }
         return null;
+    }
+
+    /**
+     * Safely tries to decode a drawable resource by checking the bitmap size
+     * and evict last-recently used elements if necessary. This will also
+     * cache the file once it is decoded, so that further calls to this
+     * method will return the same bitmap reference if still in cache.
+     *
+     * @param res      resources instance to get the drawable contents
+     * @param drawable the drawable resource to decode
+     * @return a bitmap representation of the drawable resource
+     */
+    public Bitmap decodeResource(Resources res, final int drawable) {
+        // try to get the bitmap if it's cached already
+        final String id = "drawable_resource:" + drawable;
+        Bitmap bitmap = getBitmap(id);
+        if (BitmapUtils.isBitmapValid(bitmap)) {
+            // bitmap was already cached, just return it
+            return bitmap;
+        }
+
+        // bitmap is not cached, let's decode the resource and return it
+        InputStream inputStream = res.openRawResource(drawable);
+        bitmap = decodeStream(inputStream, id, false);
+        try {
+            inputStream.close();
+        } catch (Exception ignored) {
+        }
+        return bitmap;
+    }
+
+    /**
+     * Safely tries to decode an input stream by checking the bitmap size
+     * and evict last-recently used elements if necessary. This will also
+     * cache the file once it is decoded, so that further calls to this
+     * method will return the same bitmap reference if still in cache.
+     *
+     * @param inputStream the input stream pointing to the image to decode
+     * @param id          the id will point to the decoded bitmap once cached
+     * @return a bitmap representation of the drawable resource
+     */
+    public Bitmap decodeStream(InputStream inputStream, String id) {
+        return decodeStream(inputStream, id, true);
+    }
+
+    private Bitmap decodeStream(InputStream inputStream, String id, boolean tryToGetFromCache) {
+        if (tryToGetFromCache) {
+            Bitmap bitmap = getBitmap(id);
+            if (BitmapUtils.isBitmapValid(bitmap)) {
+                // bitmap was already cached, just return it
+                return bitmap;
+            }
+        }
+        // let's get the file size
+        int fileSize;
+        try {
+            fileSize = inputStream.available();
+        } catch (Exception e) {
+            return null;
+        }
+
+        // Images are usually in PNG  format which is actually a compressed bitmap.
+        // When Android decodes the image, its size can increase up to 20 times.
+        // It could be much less, but we are being pessimistic in order to avoid
+        // OutOfMemory crashes.
+        int tentativeNewFileSize = fileSize * 20;
+        // if the current cache plus the file that is going to
+        // be added surpasses the maximum cache size, we will have to evict
+        // some files until we have enough space
+        if (cache.size() + tentativeNewFileSize > cache.maxSize()) {
+            cache.trimToSize(cache.maxSize() - tentativeNewFileSize);
+        }
+
+        // now that we have the bitmap, let's cache it right away
+        Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+        if (BitmapUtils.isBitmapValid(bitmap)) {
+            BitmapRef bitmapRef = new BitmapRef(id);
+            bitmapRef.loaded(bitmap);
+            cache.put(id, bitmapRef);
+        }
+        return bitmap;
+    }
+
+    /**
+     * @return number of bitmaps currently cached
+     */
+    public int cacheSize() {
+        return cache.cacheSize();
     }
 
     /**

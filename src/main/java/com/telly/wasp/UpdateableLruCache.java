@@ -128,14 +128,18 @@ class UpdateableLruCache<K, V> {
      * @param maxSize the maximum size of the cache before returning. May be -1
      *                to evict even 0-sized elements.
      */
-    private void trimToSize(int maxSize) {
+    void trimToSize(int maxSize) {
         while (true) {
             K key;
             V value;
             synchronized (this) {
-                if (size < 0 || (map.isEmpty() && size != 0)) {
+                if (size < 0) {
                     throw new IllegalStateException(getClass().getName()
-                            + ".sizeOf() is reporting inconsistent results!");
+                            + ".sizeOf() is reporting inconsistent results size < 0");
+                }
+                if (map.isEmpty() && size != 0) {
+                    throw new IllegalStateException(getClass().getName()
+                            + ".sizeOf() is reporting inconsistent results map.isEmpty() && size != 0");
                 }
 
                 if (size <= maxSize || map.isEmpty()) {
@@ -331,5 +335,8 @@ class UpdateableLruCache<K, V> {
         return String.format("LruCache[maxSize=%d,hits=%d,misses=%d,hitRate=%d%%]",
                 maxSize, hitCount, missCount, hitPercent);
     }
-}
 
+    public int cacheSize() {
+        return map.size();
+    }
+}
