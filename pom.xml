@@ -7,7 +7,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.codeslap</groupId>
+    <groupId>com.telly</groupId>
     <artifactId>wasp</artifactId>
     <version>1.6-SNAPSHOT</version>
     <packaging>jar</packaging>
@@ -47,6 +47,7 @@
             <url>http://casidiablo.net/</url>
             <roles>
                 <role>Contributor</role>
+                <role>Developer</role>
             </roles>
         </developer>
     </developers>
@@ -93,8 +94,13 @@
     </build>
 
     <distributionManagement>
+        <snapshotRepository>
+            <id>telly-sonatype-nexus-snapshot</id>
+            <name>Nexus Snapshot Repository</name>
+            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+        </snapshotRepository>
         <repository>
-            <id>sonatype-nexus-staging</id>
+            <id>telly-sonatype-nexus-staging</id>
             <name>Nexus Staging Repository</name>
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
