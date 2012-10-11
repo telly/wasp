@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.os.Debug;
 import android.util.Log;
 
@@ -14,6 +15,8 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import static java.lang.String.format;
 
 /**
  * Helper to deal with Bitmaps, including downloading and caching.
@@ -28,6 +31,7 @@ public class BitmapHelper {
      */
     private static BitmapHelper instance;
     private static final String WASP_PREFIX = "wasp";
+    private static final String MUTABLE_BITMAP_PREFIX = "mutable_%d";
     /**
      * On memory pool to add already loaded from file bitmaps
      * Note: will be purged on by itself in case of low memory
@@ -78,8 +82,8 @@ public class BitmapHelper {
         }
         for (String uri : uris) {
             File file = getCacheFileFromUri(context, uri);
-            if (file.exists()) {
-                file.delete();
+            if (file.exists() && !file.delete()) {
+                throw new RuntimeException("Could not delete " + file);
             }
         }
     }
@@ -99,8 +103,8 @@ public class BitmapHelper {
                 continue;
             }
             File file = new File(cacheDirectory, fileName);
-            if (file.exists()) {
-                file.delete();
+            if (file.exists() && !file.delete()) {
+                throw new RuntimeException("Could not delete " + file);
             }
         }
     }
@@ -172,13 +176,17 @@ public class BitmapHelper {
                 e.printStackTrace();
             }
             if (BitmapUtils.isBitmapValid(bitmap)) {
-                BitmapRef bitmapRef = new BitmapRef(urlFrom);
-                bitmapRef.loaded(bitmap);
-                cache.put(urlFrom, bitmapRef);
-                return bitmap;
+                return putMapInCache(urlFrom, bitmap);
             }
         }
         return null;
+    }
+
+    private Bitmap putMapInCache(String cacheId, Bitmap bitmap) {
+        BitmapRef bitmapRef = new BitmapRef(cacheId);
+        bitmapRef.loaded(bitmap);
+        cache.put(cacheId, bitmapRef);
+        return bitmap;
     }
 
     /**
@@ -255,11 +263,166 @@ public class BitmapHelper {
         // now that we have the bitmap, let's cache it right away
         Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
         if (BitmapUtils.isBitmapValid(bitmap)) {
-            BitmapRef bitmapRef = new BitmapRef(id);
-            bitmapRef.loaded(bitmap);
-            cache.put(id, bitmapRef);
+            return putMapInCache(id, bitmap);
         }
         return bitmap;
+    }
+
+    /**
+     * Safely returns a mutable bitmap with the specified width and height. Its
+     * initial density is as per {@link Bitmap#getDensity}.
+     *
+     * @param width  The width of the bitmap
+     * @param height The height of the bitmap
+     * @param config The bitmap config to create.
+     * @throws IllegalArgumentException if the width or height are <= 0
+     */
+    public Bitmap createBitmap(int width, int height, Bitmap.Config config) {
+        if (config == null) {
+            throw new IllegalStateException("Bitmap.Config cannot be null");
+        }
+        if (width <= 0 || height <= 0) {
+            throw new IllegalArgumentException("Width and height must be > 0");
+        }
+
+        // let's calculate the bitmap byte size
+        int bitmapSize = calculateBitmapSize(width, height, config);
+
+        // if the current cache plus the file that is going to
+        // be added surpasses the maximum cache size, we will have to evict
+        // some files until we have enough space
+        if (cache.size() + bitmapSize > cache.maxSize()) {
+            cache.trimToSize(cache.maxSize() - bitmapSize);
+        }
+
+        // now that we have the bitmap, let's cache it right away
+        Bitmap bitmap = Bitmap.createBitmap(width, height, config);
+        if (BitmapUtils.isBitmapValid(bitmap)) {
+            return putMapInCache(format(MUTABLE_BITMAP_PREFIX, System.currentTimeMillis()), bitmap);
+        }
+        return bitmap;
+    }
+
+    /**
+     * Safely returns an immutable bitmap from the source bitmap. The new bitmap may
+     * be the same object as source, or a copy may have been made.  It is
+     * initialized with the same density as the original bitmap.
+     *
+     * @param src source bitmap
+     */
+    public Bitmap createBitmap(Bitmap src) {
+        return createBitmap(src, 0, 0, src.getWidth(), src.getHeight());
+    }
+
+    /**
+     * Returns an immutable bitmap from the specified subset of the source
+     * bitmap. The new bitmap may be the same object as source, or a copy may
+     * have been made. It is initialized with the same density as the original
+     * bitmap.
+     *
+     * @param source The bitmap we are subsetting
+     * @param x      The x coordinate of the first pixel in source
+     * @param y      The y coordinate of the first pixel in source
+     * @param width  The number of pixels in each row
+     * @param height The number of rows
+     * @return A copy of a subset of the source bitmap or the source bitmap itself.
+     */
+    public Bitmap createBitmap(Bitmap source, int x, int y, int width, int height) {
+        return createBitmap(source, x, y, width, height, null, false);
+    }
+
+    /**
+     * Returns an immutable bitmap from subset of the source bitmap,
+     * transformed by the optional matrix. The new bitmap may be the
+     * same object as source, or a copy may have been made. It is
+     * initialized with the same density as the original bitmap.
+     * <p/>
+     * If the source bitmap is immutable and the requested subset is the
+     * same as the source bitmap itself, then the source bitmap is
+     * returned and no new bitmap is created.
+     *
+     * @param source The bitmap we are subsetting
+     * @param x      The x coordinate of the first pixel in source
+     * @param y      The y coordinate of the first pixel in source
+     * @param width  The number of pixels in each row
+     * @param height The number of rows
+     * @param m      Optional matrix to be applied to the pixels
+     * @param filter true if the source should be filtered.
+     *               Only applies if the matrix contains more than just
+     *               translation.
+     * @return A bitmap that represents the specified subset of source
+     * @throws IllegalArgumentException if the x, y, width, height values are
+     *                                  outside of the dimensions of the source bitmap.
+     */
+    public Bitmap createBitmap(Bitmap source, int x, int y, int width, int height, Matrix m, boolean filter) {
+        if (source == null) {
+            throw new IllegalStateException("Bitmap source cannot be null");
+        }
+        int bitmapByteSize = BitmapUtils.getBitmapSize(source);
+
+        // if the current cache plus the file that is going to
+        // be added surpasses the maximum cache size, we will have to evict
+        // some files until we have enough space
+        if (cache.size() + bitmapByteSize > cache.maxSize()) {
+            cache.trimToSize(cache.maxSize() - bitmapByteSize);
+        }
+
+        // now that we have the bitmap, let's cache it right away
+        Bitmap bitmap = Bitmap.createBitmap(source, x, y, width, height, m, filter);
+        if (BitmapUtils.isBitmapValid(bitmap)) {
+            return putMapInCache(format(MUTABLE_BITMAP_PREFIX, System.currentTimeMillis()), bitmap);
+        }
+        return bitmap;
+    }
+
+    /**
+     * Safely creates a new bitmap, scaled from an existing bitmap, when possible. If the
+     * specified width and height are the same as the current width and height of the source
+     * bitmap, the source bitmap is returned and now new bitmap is created.
+     *
+     * @param src       The source bitmap.
+     * @param dstWidth  The new bitmap's desired width.
+     * @param dstHeight The new bitmap's desired height.
+     * @param filter    true if the source should be filtered.
+     * @return The new scaled bitmap or the source bitmap if no scaling is required.
+     */
+    public Bitmap createScaledBitmap(Bitmap src, int dstWidth, int dstHeight, boolean filter) {
+        if (src == null) {
+            throw new IllegalStateException("Bitmap source cannot be null");
+        }
+        Bitmap.Config config = src.getConfig();
+        int bitmapByteSize = calculateBitmapSize(dstWidth, dstHeight, config);
+
+        // if the current cache plus the file that is going to
+        // be added surpasses the maximum cache size, we will have to evict
+        // some files until we have enough space
+        if (cache.size() + bitmapByteSize > cache.maxSize()) {
+            cache.trimToSize(cache.maxSize() - bitmapByteSize);
+        }
+
+        // now that we have the bitmap, let's cache it right away
+        Bitmap bitmap = Bitmap.createScaledBitmap(src, dstWidth, dstHeight, filter);
+        if (BitmapUtils.isBitmapValid(bitmap)) {
+            return putMapInCache(format(MUTABLE_BITMAP_PREFIX, System.currentTimeMillis()), bitmap);
+        }
+        return bitmap;
+    }
+
+    private int calculateBitmapSize(int width, int height, Bitmap.Config config) {
+        int bitmapSize = 0;
+        switch (config) {
+            case ARGB_8888:
+                bitmapSize = width * height * 4;
+                break;
+            case ARGB_4444:
+            case RGB_565:
+                bitmapSize = width * height * 2;
+                break;
+            case ALPHA_8:
+                bitmapSize = width * height * 1;
+                break;
+        }
+        return bitmapSize;
     }
 
     /**
@@ -373,10 +536,10 @@ public class BitmapHelper {
 
     private static File getCacheFileFromUri(Context context, String urlFrom) {
         File cacheDirectory = IOUtils.getCacheDirectory(context);
-        return getCacheFileFromUri(context, cacheDirectory, urlFrom);
+        return getCacheFileFromUri(cacheDirectory, urlFrom);
     }
 
-    private static File getCacheFileFromUri(Context context, File cacheDir, String urlFrom) {
+    private static File getCacheFileFromUri(File cacheDir, String urlFrom) {
         String filename = WASP_PREFIX + String.valueOf(urlFrom.hashCode());
         return new File(cacheDir, filename);
     }
@@ -575,7 +738,7 @@ public class BitmapHelper {
 
             private Bitmap doLoad() throws IOException {
                 Bitmap image = null;
-                File file = BitmapHelper.getCacheFileFromUri(mContext, cacheDir, reference.from);
+                File file = BitmapHelper.getCacheFileFromUri(cacheDir, reference.from);
 
                 if (file.exists()) {//Something is stored
                     image = BitmapUtils.loadBitmapFile(file.getCanonicalPath());
