@@ -1,11 +1,9 @@
 Wasp - Bitmap Network Utilities for Android
 ===========================================
 
-<p>
-  <a href="http://casidiablo.github.com/wasp-logo.jpg">
-    <img src="http://casidiablo.github.com/small-wasp-logo.png" alt="Wasp logo"/>
-  </a> This library contains some helpers used to download images asynchronously and get their bitmap.
-</p>
+![Wasp logo](https://raw.github.com/twitvid/wasp/master/img/wasp.png)
+
+This library contains some helpers used to download images asynchronously and load delicious [Bitmaps](https://developer.android.com/reference/android/graphics/Bitmap.html).
 
 ###Examples
 
