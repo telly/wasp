@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          android:versionCode="180"
+          android:versionName="1.8-SNAPSHOT"
+          package="com.telly.wasp.test">
+
+    <uses-sdk android:minSdkVersion="4" android:targetSdkVersion="16"/>
+    <!-- We add an application tag here just so that we can indicate that
+         this package needs to link against the android.test library,
+         which is needed when building test cases. -->
+    <application>
+        <uses-library android:name="android.test.runner" />
+    </application>
+
+    <!--
+    This declares that this app uses the instrumentation test runner targeting
+    the package of com.example.android.apis.  To run the tests use the command:
+    "adb shell am instrument -w com.example.android.apis.tests/android.test.InstrumentationTestRunner"
+    -->
+    <instrumentation android:name="android.test.InstrumentationTestRunner"
+                     android:targetPackage="com.telly.wasp.test"
+                     android:label="Tests for Telly Wasp."/>
+</manifest>
