@@ -16,7 +16,9 @@ public class BitmapObserver extends BaseBitmapObserver {
     private final WeakReference<ImageView> viewRef;
 
     /**
-     * Creates an observer by associating a given imgView with given URL
+     * Creates an observer by associating a given imgView with given URL.
+     * <p/>
+     * Note: this will change image's tag using {@link ImageView#setTag(Object)}.
      *
      * @param imgView         View to assign bitmap to
      * @param url             URL to associate
@@ -25,6 +27,7 @@ public class BitmapObserver extends BaseBitmapObserver {
     public BitmapObserver(ImageView imgView, String url, Handler uiThreadHandler) {
         super(url, uiThreadHandler);
         viewRef = new WeakReference<ImageView>(imgView);
+        imgView.setTag(url);
     }
 
     @Override

@@ -16,7 +16,6 @@ Bitmap bitmap = bh.getBitmap(imageUrl);
 if (BitmapUtils.isBitmapValid(bitmap)) {
     imageView.setImageBitmap(bitmap);
 } else {
-    imageView.setTag(imageUrl); // this is mandatory!
     BitmapObserver observer = new BitmapObserver(imageView, imageUrl, new Handler());
     bh.registerBitmapObserver(this, observer);
 }
