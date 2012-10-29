@@ -31,7 +31,8 @@ public class BitmapHelper {
      */
     private static BitmapHelper instance;
     private static final String WASP_PREFIX = "wasp";
-    private static final String MUTABLE_BITMAP_PREFIX = "mutable_%d";
+    private static final String MUTABLE_BITMAP_PREFIX = "mutable_%d_%d";
+    private static final Random RANDOM = new Random(System.currentTimeMillis());
     /**
      * On memory pool to add already loaded from file bitmaps
      * Note: will be purged on by itself in case of low memory
@@ -189,6 +190,10 @@ public class BitmapHelper {
         return bitmap;
     }
 
+    private static String generateCacheId() {
+        return format(MUTABLE_BITMAP_PREFIX, System.currentTimeMillis(), RANDOM.nextInt(Integer.MAX_VALUE));
+    }
+
     /**
      * Safely tries to decode a drawable resource by checking the bitmap size
      * and evict last-recently used elements if necessary. This will also
@@ -298,7 +303,7 @@ public class BitmapHelper {
         // now that we have the bitmap, let's cache it right away
         Bitmap bitmap = Bitmap.createBitmap(width, height, config);
         if (BitmapUtils.isBitmapValid(bitmap)) {
-            return putMapInCache(format(MUTABLE_BITMAP_PREFIX, System.currentTimeMillis()), bitmap);
+            return putMapInCache(generateCacheId(), bitmap);
         }
         return bitmap;
     }
@@ -370,7 +375,7 @@ public class BitmapHelper {
         // now that we have the bitmap, let's cache it right away
         Bitmap bitmap = Bitmap.createBitmap(source, x, y, width, height, m, filter);
         if (BitmapUtils.isBitmapValid(bitmap)) {
-            return putMapInCache(format(MUTABLE_BITMAP_PREFIX, System.currentTimeMillis()), bitmap);
+            return putMapInCache(generateCacheId(), bitmap);
         }
         return bitmap;
     }
@@ -403,7 +408,7 @@ public class BitmapHelper {
         // now that we have the bitmap, let's cache it right away
         Bitmap bitmap = Bitmap.createScaledBitmap(src, dstWidth, dstHeight, filter);
         if (BitmapUtils.isBitmapValid(bitmap)) {
-            return putMapInCache(format(MUTABLE_BITMAP_PREFIX, System.currentTimeMillis()), bitmap);
+            return putMapInCache(generateCacheId(), bitmap);
         }
         return bitmap;
     }
