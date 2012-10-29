@@ -9,7 +9,7 @@
 
     <groupId>com.telly</groupId>
     <artifactId>wasp</artifactId>
-    <version>1.8</version>
+    <version>1.9-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>Wasp - Bitmap Utilities for Android</name>
     <description>Bitmap utilities for Android</description>
