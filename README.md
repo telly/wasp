@@ -1,6 +1,9 @@
 Wasp - Bitmap Network Utilities for Android
 ===========================================
 
+###`@Deprecated`
+Unfortunatenly this library is no longer maintained, we encourage you to use other widely supported solutions like [Picasso](https://github.com/square/picasso).
+
 ![Wasp logo](https://raw.github.com/telly/wasp/master/img/wasp.png)
 
 This library contains some helpers used to download images asynchronously and load delicious [Bitmaps](https://developer.android.com/reference/android/graphics/Bitmap.html).
